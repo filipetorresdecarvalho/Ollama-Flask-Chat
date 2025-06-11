@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Chat with AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            display: flex; justify-content: center; align-items: center; text-align: center; min-height: 100vh;
+        }
+        .home-container {
+            max-width: 600px; padding: 40px; background-color: white;
+            border-radius: var(--border-radius); box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .home-container h1 { margin-bottom: 20px; }
+        .home-container p { color: #555; margin-bottom: 30px; }
+        .btn-group a {
+            text-decoration: none; color: white; background-color: var(--primary-color);
+            padding: 15px 30px; border-radius: var(--border-radius); margin: 0 10px;
+            font-size: 1.1rem; transition: background-color 0.3s;
+        }
+        .btn-group a:hover { background-color: #45a049; }
+        .btn-group a.secondary { background-color: var(--secondary-color); }
+        .btn-group a.secondary:hover { background-color: #1e88e5; }
+    </style>
+</head>
+<body>
+    <div class="home-container">
+        <h1>Welcome to Your Personal AI Assistant</h1>
+        <p>Log in to continue your conversations or sign up to start a new journey.</p>
+        <div class="btn-group">
+            <a href="{{ url_for('login') }}">Sign In</a>
+            <a href="{{ url_for('signup') }}" class="secondary">Sign Up</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error{% endblock %}
+
+{% block content %}
+<div class="error-page-container">
+    <h1>500 - An Unexpected Error Occurred</h1>
+    <p>We are sorry, but our server encountered a problem. Our team has been notified.</p>
+    
+    {% if error_details %}
+    <div class="error-details">
+        <h2>Error Details:</h2>
+        <pre>{{ error_details }}</pre>
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('home') }}" class="sidebar-button">Go Home</a>
+</div>
+{% endblock %}

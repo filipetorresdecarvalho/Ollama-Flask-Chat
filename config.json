@@ -1,0 +1,17 @@
+{
+    "flask_secret_key": "7c09a19ef2be870df78fc489386fba8f634e04ae2ae6f5cc9a4d1e8c5bfd072c",
+    "root_admin_chat_db_uuid": "3d0f1446-525b-49cc-9102-61e5e69d0ace",
+    "ollama_config": {
+        "default_model": "deepseek-r1:32b",
+        "restricted_keywords": [
+            "dolphin",
+            "uncensored"
+        ]
+    },
+    "server_config": {
+        "host": "192.168.3.2",
+        "port": 5000,
+        "debug": true,
+        "threaded": true
+    }
+}

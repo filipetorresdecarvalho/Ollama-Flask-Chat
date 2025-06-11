@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Your Profile{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h1>Your Profile</h1>
+    <p>Update your personal information or change your password.</p>
+
+    <div class="profile-forms-grid">
+        <div class="profile-form-card">
+            <h2>Personal Information</h2>
+            <form method="post" action="{{ url_for('profile') }}">
+                <input type="hidden" name="form_name" value="update_info">
+                <div class="form-group">
+                    <label for="username">Username (cannot be changed)</label>
+                    <input type="text" id="username" name="username" value="{{ user.username }}" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email (cannot be changed)</label>
+                    <input type="email" id="email" name="email" value="{{ user.email }}" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone</label>
+                    <input type="tel" id="phone" name="phone" value="{{ user.phone or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="birthday">Birthday</label>
+                    <input type="date" id="birthday" name="birthday" value="{{ user.birthday or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" id="city" name="city" value="{{ user.city or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <input type="text" id="country" name="country" value="{{ user.country or '' }}">
+                </div>
+                <button type="submit" class="button-primary">Update Info</button>
+            </form>
+        </div>
+
+        <div class="profile-form-card">
+            <h2>Change Password</h2>
+            <form method="post" action="{{ url_for('profile') }}">
+                <input type="hidden" name="form_name" value="change_password">
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" required pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" title="Minimum eight characters, at least one uppercase letter, one lowercase letter, one number and one special character.">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="button-secondary">Change Password</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

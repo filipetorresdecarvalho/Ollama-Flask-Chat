@@ -1,0 +1,21 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Databases
+*.db
+# Keep the schema files, but ignore the actual database files
+database/*.db
+
+# Logs and Backups
+logs/
+backup/
+
+# IDE / OS specific
+.idea/
+.vscode/
+*.DS_Store
