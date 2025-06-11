@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>app_debug.py - Comprehensive Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 5px;
+            font-size: 85%;
+        }
+        pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <h1><code>app_debug.py</code> - Comprehensive Diagnostic Tool</h1>
+    <p>This script is a powerful, standalone utility designed to diagnose the health of the application environment and the integrity of the project's structure. It runs a series of checks and generates a detailed JSON report, making it an essential tool for troubleshooting installation and setup issues.</p>
+
+    <h2>1. Configuration and Global State</h2>
+    <p>The script starts by defining its configuration and the main data structure used to store the results of the diagnostic checks.</p>
+    <pre><code>LOGS_DIR = 'logs'
+REQUIRED_MODULES = ['flask', 'werkzeug', 'ollama', 'pypdf']
+RESULTS = {
+    "report_generated_at": datetime.now().isoformat(),
+    "python_version": sys.version,
+    "platform": sys.platform,
+    "dependencies": {},
+    "app_import_test": {}
+}</code></pre>
+    <ul>
+        <li><code>LOGS_DIR</code>: A constant that defines the directory where the final JSON report will be saved.</li>
+        <li><code>REQUIRED_MODULES</code>: A list of strings containing the names of the essential Python libraries the application depends on.</li>
+        <li><code>RESULTS</code>: A dictionary that acts as the central repository for all diagnostic findings. It is pre-populated with metadata like the report timestamp, Python version, and OS platform, and is progressively filled by the check functions.</li>
+    </ul>
+
+    <h2>2. Core Functions</h2>
+    <p>The script's logic is broken down into several modular functions, each responsible for a specific set of checks.</p>
+
+    <h3><code>check_dependencies()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To verify that all required Python libraries specified in <code>REQUIRED_MODULES</code> are installed in the current environment.</li>
+        <li><strong>How it works</strong>: It iterates through the list of required modules. For each module, it uses <code>importlib.import_module()</code> within a <code>try...except ImportError</code> block. This is a clean way to programmatically check for the presence of a library without crashing the script if it's missing.</li>
+        <li><strong>Output</strong>: It prints the status ("OK" or "MISSING!") of each dependency to the console and records this status in the <code>RESULTS["dependencies"]</code> dictionary.</li>
+    </ul>
+
+    <h3><code>test_app_import()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To check the main <code>app.py</code> file for syntax errors or its own import errors without actually running the Flask server. This is a crucial early-warning check.</li>
+        <li><strong>How it works</strong>: The function attempts to execute <code>import app</code>. If <code>app.py</code> contains any syntax errors (e.g., incorrect indentation, invalid statements) or if it fails to import one of its own dependencies, this statement will raise an exception. The function catches any <code>Exception</code>, providing a broad net for potential issues.</li>
+        <li><strong>Output</strong>: If the import is successful, it logs an "OK" status. If it fails, it logs a "FAILED" status and, most importantly, includes the full exception traceback in the report. This traceback provides the exact file, line number, and error message, which is invaluable for debugging. The function returns <code>True</code> on success and <code>False</code> on failure, controlling the script's execution flow.</li>
+    </ul>
+
+    <h3><code>run_file_and_schema_checks()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To reuse the project integrity checks from the <code>fix.py</code> script, avoiding code duplication.</li>
+        <li><strong>How it works</strong>: It imports the <code>fix</code> module and directly calls its <code>check_structure()</code> and <code>check_schemas()</code> functions. It passes a new dictionary, <code>fix_results</code>, to these functions, which they populate with their findings.</li>
+        <li><strong>Output</strong>: The results from the <code>fix.py</code> functions are nested inside the main <code>RESULTS</code> dictionary under the key <code>"project_health_check"</code>.</li>
+    </ul>
+    
+    <h3><code>main()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To act as the main orchestrator, running all the diagnostic checks in a logical order and generating the final report.</li>
+        <li><strong>Execution Flow</strong>:
+            <ol>
+                <li>Ensures the <code>LOGS_DIR</code> exists using <code>os.makedirs(..., exist_ok=True)</code>.</li>
+                <li>Always runs the dependency check first via <code>check_dependencies()</code>.</li>
+                <li>Performs the application import test via <code>test_app_import()</code>.</li>
+                <li><strong>Conditionally</strong> runs the file and schema checks via <code>run_file_and_schema_checks()</code> only if the `test_app_import()` was successful. This is an intelligent design that prevents the script from trying to check file structures if the main application file is fundamentally broken.</li>
+                <li>Generates a timestamped report filename to avoid overwriting previous reports.</li>
+                <li>Dumps the final, populated <code>RESULTS</code> dictionary into a well-formatted JSON file using <code>json.dump(..., indent=4)</code> for readability.</li>
+                <li>Prints a confirmation message to the console indicating where the report has been saved.</li>
+            </ol>
+        </li>
+    </ul>
+
+    <h2>3. Script Execution</h2>
+    <p>The standard <code>if __name__ == "__main__":</code> block ensures that the <code>main()</code> function is called only when the script is executed directly from the command line (e.g., <code>python app_debug.py</code>). This allows the functions within the script to be potentially imported by other modules without automatically running the full diagnostic process.</p>
+
+</body>
+</html>

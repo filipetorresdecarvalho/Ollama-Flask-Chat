@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>app.py - Core Application Logic</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 5px;
+            font-size: 85%;
+        }
+        pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+
+    <h1><code>app.py</code> - Core Application Logic</h1>
+    <p>This file serves as the central hub for the Flask web application. It handles everything from configuration and database connections to user authentication, request routing, and API endpoints.</p>
+
+    <h2>1. Imports and Initial Configuration</h2>
+    <p>The script begins by importing all necessary libraries and loading critical configuration files.</p>
+    <pre><code>import os
+import re
+import sqlite3
+import uuid
+import traceback
+import json
+import secrets
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import (
+    Flask, render_template, request, Response, jsonify,
+    send_from_directory, session, redirect, url_for, g, flash
+)
+import ollama
+import pypdf</code></pre>
+    <ul>
+        <li><strong>Configuration Loading</strong>: The script immediately loads <code>config.json</code> and <code>models.json</code>. If either file is missing or corrupt, the application will print a fatal error and exit. This ensures that the application doesn't start in a broken state.</li>
+        <li><strong>Flask App Initialization</strong>: A Flask <code>app</code> instance is created, and the <code>app.secret_key</code> is configured from the loaded <code>config.json</code> file, which is essential for session management.</li>
+    </ul>
+
+    <h2>2. Path and App Configurations</h2>
+    <p>This section defines constants for various directory and file paths used throughout the application, ensuring consistency.</p>
+    <pre><code>DATABASE_DIR = 'database'
+LOGS_DIR = 'logs'
+USER_DB_PATH = os.path.join(DATABASE_DIR, 'users.db')
+# ... and so on</code></pre>
+    <ul>
+        <li><strong>Database Paths</strong>: Defines paths for user, chat, logs, security, and admin databases.</li>
+        <li><strong>Upload Folder</strong>: Sets the <code>UPLOAD_FOLDER</code> configuration for Flask.</li>
+        <li><strong>Allowed Extensions</strong>: Defines sets of allowed file extensions for text, PDF, and image uploads, which can be used for file validation.</li>
+    </ul>
+
+    <h2>3. Database Connection Management</h2>
+    <p>The application uses a robust pattern for managing multiple SQLite database connections.</p>
+    <ul>
+        <li><strong><code>get_db(db_path, row_factory=False)</code></strong>: A generic function to connect to a specified SQLite database. It optionally uses <code>sqlite3.Row</code> to allow accessing columns by name.</li>
+        <li><strong>Connection Caching (<code>g</code> object)</strong>: Specific getter functions like <code>get_user_db()</code>, <code>get_chat_db()</code>, etc., use Flask's application context global <code>g</code> to cache the database connection for the duration of a single request. This prevents reconnecting to the same database multiple times within one request cycle.</li>
+        <li><strong>User-Specific Chat DB</strong>: The <code>get_chat_db</code> function is particularly notable. It retrieves the current user's unique <code>chat_db_uuid</code> from the session, constructs the path to their personal chat database, and connects to it. If the user's chat database doesn't exist, it is initialized on-the-fly.</li>
+        <li><strong><code>close_dbs(e=None)</code></strong>: This function, decorated with <code>@app.teardown_appcontext</code>, ensures that all active database connections stored in <code>g</code> are properly closed at the end of each request, preventing resource leaks.</li>
+    </ul>
+
+    <h2>4. Decorators and Error Handling</h2>
+    <p>Custom decorators and error handlers provide security and robust error management.</p>
+    <ul>
+        <li><strong><code>@login_required</code></strong>: A decorator that checks if a <code>user_id</code> is present in the <code>session</code>. If not, it redirects the user to the login page.</li>
+        <li><strong><code>@admin_required</code></strong>: A decorator that builds on <code>@login_required</code>, further checking if the user's <code>role</code> in the session is <code>'admin'</code>. If not, it redirects them away from admin-only pages.</li>
+        <li><strong>Error Handlers (<code>404</code>, <code>500</code>)</strong>:
+            <ul>
+                <li><code>@app.errorhandler(404)</code>: Renders a custom <code>404.html</code> page for "Not Found" errors.</li>
+                <li><code>@app.errorhandler(500)</code>: For internal server errors, this handler logs the detailed exception traceback to the <code>logs.db</code> database before rendering a <code>500.html</code> page. This provides a user-friendly error page while ensuring administrators have access to detailed logs for debugging.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>5. User Authentication and Profile Routes</h2>
+    <p>These routes handle the complete user lifecycle.</p>
+    <ul>
+        <li><strong><code>/signup</code></strong>: Manages new user registration. It hashes the password using <code>generate_password_hash</code> and assigns a unique <code>chat_db_uuid</code> to each new user. It handles potential <code>sqlite3.IntegrityError</code> if a username or email is already taken.</li>
+        <li><strong><code>/login</code></strong>: Authenticates users by comparing the submitted password with the stored hash using <code>check_password_hash</code>. On success, it populates the <code>session</code> with user details (<code>user_id</code>, <code>username</code>, <code>role</code>) and logs the login event to the security database.</li>
+        <li><strong><code>/logout</code></strong>: Clears the session to log the user out.</li>
+        <li><strong><code>/profile</code></strong>: Allows logged-in users to update their personal information or change their password. It uses a <code>form_name</code> hidden field to differentiate between the two forms on the page. Password changes include validation for the current password, password confirmation, and complexity requirements via a regex pattern.</li>
+    </ul>
+
+    <h2>6. Chat Interface Routes</h2>
+    <p>These routes are responsible for rendering and managing the chat conversations.</p>
+    <ul>
+        <li><strong><code>/main</code></strong>: Acts as a redirector. It finds the user's most recent conversation and redirects to the specific chat URL for that conversation. If no conversations exist, it redirects to create a new one.</li>
+        <li><strong><code>/chat/&lt;conversation_id&gt;</code></strong>: The main chat interface. It renders <code>main.html</code>, passing the <code>conversation_id</code> so the frontend JavaScript knows which conversation to load data for.</li>
+        <li><strong><code>/new_chat</code></strong>: Creates a new conversation with a unique UUID and a default title, then redirects the user to the new chat page.</li>
+    </ul>
+
+    <h2>7. Administrative Routes</h2>
+    <p>These routes are protected by the <code>@admin_required</code> decorator.</p>
+    <ul>
+        <li><strong><code>/admin</code></strong>: The main admin panel, which fetches and displays a list of all users from the database.</li>
+        <li><strong><code>/admin/update_role</code></strong>: A <code>POST</code> endpoint that handles the logic for changing a user's role. It includes a safeguard to prevent the primary admin (user ID 1) from having their role changed.</li>
+    </ul>
+
+    <h2>8. API Endpoints</h2>
+    <p>These routes provide a JSON-based API for the frontend to interact with, enabling dynamic page updates without full reloads.</p>
+    <ul>
+        <li><strong><code>/api/models</code></strong>: Returns a list of available Ollama models. It enforces role-based restrictions, hiding models with certain keywords (from <code>config.json</code>) from non-admin users.</li>
+        <li><strong><code>/api/load_model</code></strong>: A <code>POST</code> endpoint that allows the frontend to "warm up" a selected model by sending a minimal <code>ollama.generate</code> request. This improves user experience by loading the model into memory before the first chat message is sent. It then stores the selected model in the user's session.</li>
+        <li><strong><code>/api/conversations</code></strong>: Fetches all conversation titles and IDs for the logged-in user.</li>
+        <li><strong><code>/api/conversation/&lt;conversation_id&gt;</code></strong>: Retrieves all messages (role and content) for a specific conversation.</li>
+        <li><strong><code>/ask</code></strong>: The core chat endpoint. It receives a user's message, saves it to the database, retrieves the entire conversation history, sends it to the <code>ollama.chat</code> API, and returns the AI's complete response. The response from Ollama is collected in full before being stored in the database and sent back to the client.</li>
+    </ul>
+
+    <h2>9. Application Startup and Initialization</h2>
+    <p>The <code>if __name__ == '__main__':</code> block handles the application's startup process.</p>
+    <ul>
+        <li><strong>Directory Creation</strong>: It ensures that all necessary directories (<code>database</code>, <code>userchats</code>, <code>uploads</code>, <code>logs</code>) exist, creating them if they don't.</li>
+        <li><strong>Database Initialization</strong>: It checks for the existence of the main database files (<code>users.db</code>, <code>logs.db</code>, etc.). If a database file is missing, it calls the <code>init_db_on_startup</code> function to create it and execute its corresponding schema from the <code>.sql</code> file.</li>
+        <li><strong>Server Execution</strong>: Finally, it starts the Flask development server using the host, port, debug, and threading settings specified in <code>config.json</code>.</li>
+    </ul>
+
+</body>
+</html>

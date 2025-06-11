@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Schema Architecture</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        h3 {
+            font-size: 1.2em;
+            border: none;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        .db-section {
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1em 1.5em;
+            margin-bottom: 2em;
+        }
+        .info {
+            background-color: #e7f3ff;
+            padding: 1em;
+            border-left: 5px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Database Schema Architecture</h1>
+
+    <h2>1. Overall Architecture: A Multi-Database Approach</h2>
+    <div class="info">
+        <p>This application employs a multi-database architecture rather than a single monolithic database. This design choice separates concerns, isolates user data for privacy and scalability, and simplifies management.</p>
+        <p>There are five distinct database schemas, each corresponding to a specific function within the application.</p>
+    </div>
+
+    <h2>2. Database Schema Details</h2>
+
+    <div class="db-section">
+        <h3><code>users.db</code> (from <code>schema_login.sql</code>)</h3>
+        <p><strong>Purpose</strong>: This is the central database for user authentication and management. It stores all user account information, profiles, and roles.</p>
+        
+        <h4>Table: <code>users</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>INTEGER</td>
+                    <td>The primary key for the user, which auto-increments.</td>
+                </tr>
+                <tr>
+                    <td><code>username</code></td>
+                    <td>TEXT</td>
+                    <td>The user's unique login name.</td>
+                </tr>
+                <tr>
+                    <td><code>password</code></td>
+                    <td>TEXT</td>
+                    <td>The user's hashed password. Stored securely, not in plain text.</td>
+                </tr>
+                <tr>
+                    <td><code>email</code></td>
+                    <td>TEXT</td>
+                    <td>The user's unique email address.</td>
+                </tr>
+                <tr>
+                    <td><code>chat_db_uuid</code></td>
+                    <td>TEXT</td>
+                    <td>A unique ID that links the user to their individual chat database file (e.g., <code>&lt;uuid&gt;.db</code>). This is the key to data isolation.</td>
+                </tr>
+                <tr>
+                    <td><code>role</code></td>
+                    <td>TEXT</td>
+                    <td>Defines the user's role (e.g., 'user', 'admin') for access control. Defaults to 'user'.</td>
+                </tr>
+                <tr>
+                    <td><code>phone</code>, <code>birthday</code>, <code>city</code>, <code>country</code></td>
+                    <td>TEXT</td>
+                    <td>Optional fields for the user's profile information.</td>
+                </tr>
+                <tr>
+                    <td><code>created_at</code></td>
+                    <td>TIMESTAMP</td>
+                    <td>The timestamp when the user account was created.</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Note</strong>: The schema includes <code>DROP TABLE IF EXISTS users;</code>, indicating it's designed for a clean reset during setup.</p>
+    </div>
+
+    <div class="db-section">
+        <h3>Individual Chat DBs (from <code>schema_chat.sql</code>)</h3>
+        <p><strong>Purpose</strong>: Each user has their own separate database file for storing their personal chat history. This ensures user conversations are completely isolated from one another.</p>
+
+        <h4>Table: <code>conversations</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>TEXT</td>
+                    <td>The primary key for a conversation, typically a UUID.</td>
+                </tr>
+                <tr>
+                    <td><code>title</code></td>
+                    <td>TEXT</td>
+                    <td>The title of the conversation (e.g., "New Chat").</td>
+                </tr>
+                <tr>
+                    <td><code>created_at</code></td>
+                    <td>TIMESTAMP</td>
+                    <td>The timestamp when the conversation was initiated.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>Table: <code>messages</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>INTEGER</td>
+                    <td>The primary key for a message, which auto-increments.</td>
+                </tr>
+                <tr>
+                    <td><code>conversation_id</code></td>
+                    <td>TEXT</td>
+                    <td>A foreign key that links the message to a specific conversation in the <code>conversations</code> table.</td>
+                </tr>
+                <tr>
+                    <td><code>role</code></td>
+                    <td>TEXT</td>
+                    <td>Indicates the sender of the message, either 'user' or 'assistant'.</td>
+                </tr>
+                <tr>
+                    <td><code>content</code></td>
+                    <td>TEXT</td>
+                    <td>The actual text content of the message.</td>
+                </tr>
+                <tr>
+                    <td><code>timestamp</code></td>
+                    <td>TIMESTAMP</td>
+                    <td>The timestamp when the message was created.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="db-section">
+        <h3><code>security.db</code> (from <code>schema_security.sql</code>)</h3>
+        <p><strong>Purpose</strong>: To store security-related logs for auditing purposes.</p>
+        
+        <h4>Table: <code>login_history</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>INTEGER</td>
+                    <td>The primary key for the log entry.</td>
+                </tr>
+                <tr>
+                    <td><code>user_uuid</code></td>
+                    <td>TEXT</td>
+                    <td>The unique ID of the user who logged in.</td>
+                </tr>
+                <tr>
+                    <td><code>timestamp</code></td>
+                    <td>TIMESTAMP</td>
+                    <td>The exact time of the login event.</td>
+                </tr>
+                <tr>
+                    <td><code>ip_address</code></td>
+                    <td>TEXT</td>
+                    <td>The IP address from which the login attempt originated.</td>
+                </tr>
+                <tr>
+                    <td><code>user_agent</code></td>
+                    <td>TEXT</td>
+                    <td>The user agent string of the browser or client used for the login.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="db-section">
+        <h3><code>logs.db</code> (from <code>schema_logs.sql</code>)</h3>
+        <p><strong>Purpose</strong>: To record internal application errors (500-level exceptions) for debugging.</p>
+        
+        <h4>Table: <code>error_logs</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>INTEGER</td>
+                    <td>The primary key for the error log.</td>
+                </tr>
+                <tr>
+                    <td><code>timestamp</code></td>
+                    <td>TIMESTAMP</td>
+                    <td>The time the error occurred.</td>
+                </tr>
+                <tr>
+                    <td><code>user_uuid</code></td>
+                    <td>TEXT</td>
+                    <td>The UUID of the logged-in user who experienced the error, if available.</td>
+                </tr>
+                <tr>
+                    <td><code>request_method</code></td>
+                    <td>TEXT</td>
+                    <td>The HTTP method of the request that failed (e.g., 'GET', 'POST').</td>
+                </tr>
+                <tr>
+                    <td><code>request_url</code></td>
+                    <td>TEXT</td>
+                    <td>The URL that was being accessed when the error occurred.</td>
+                </tr>
+                <tr>
+                    <td><code>ip_address</code></td>
+                    <td>TEXT</td>
+                    <td>The IP address of the client that made the request.</td>
+                </tr>
+                 <tr>
+                    <td><code>status_code</code></td>
+                    <td>INTEGER</td>
+                    <td>The HTTP status code associated with the error (e.g., 500).</td>
+                </tr>
+                <tr>
+                    <td><code>error_message</code></td>
+                    <td>TEXT</td>
+                    <td>The detailed error message or full exception traceback.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="db-section">
+        <h3><code>admin.db</code> (from <code>schema_admin.sql</code>)</h3>
+        <p><strong>Purpose</strong>: To store administrative data, specifically the reports generated by the diagnostic scripts.</p>
+        
+        <h4>Table: <code>FIX_REPORTS</code></h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>INTEGER</td>
+                    <td>The primary key for the report entry.</td>
+                </tr>
+                <tr>
+                    <td><code>timestamp</code></td>
+                    <td>TEXT</td>
+                    <td>The ISO format timestamp string of when the report was generated.</td>
+                </tr>
+                <tr>
+                    <td><code>report_json</code></td>
+                    <td>TEXT</td>
+                    <td>The complete diagnostic report, stored as a single JSON string.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>

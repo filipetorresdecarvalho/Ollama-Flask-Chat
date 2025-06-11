@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>run.py - Production Server Entry Point</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 5px;
+            font-size: 85%;
+        }
+        pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .info {
+            background-color: #e7f3ff;
+            padding: 1em;
+            border-left: 5px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1><code>run.py</code> - Production Server Entry Point</h1>
+
+    <h2>1. Purpose of this Script</h2>
+    <p>The <code>run.py</code> script is the **recommended entry point for running the application in a production or multi-user environment**. Instead of using Flask's built-in server (which is designed for development), this script employs <strong>Waitress</strong>, a production-grade Web Server Gateway Interface (WSGI) server that is more stable, secure, and efficient at handling concurrent users.</p>
+
+    <h2>2. How It Works</h2>
+    <p>The script is simple but powerful, performing two key actions:</p>
+    <pre><code>from waitress import serve
+from app import app  # Imports the 'app' object from your app.py file
+
+if __name__ == '__main__':
+    print("Starting production server with Waitress...")
+    serve(app, host='0.0.0.0', port=8080)</code></pre>
+    <ol>
+        <li><strong>Importing Components</strong>: It first imports the <code>serve</code> function from the <code>waitress</code> library and, crucially, imports the Flask <code>app</code> instance from your <code>app.py</code> file.</li>
+        <li><strong>Serving the Application</strong>: It then calls the <code>serve()</code> function, passing it the Flask <code>app</code> object.
+            <ul>
+                <li><code>host='0.0.0.0'</code>: This is a critical setting. It instructs Waitress to listen on all available network interfaces on the machine. This makes the web application accessible not just from the local machine (via <code>localhost</code>), but also from other computers on the same local network.</li>
+                <li><code>port=8080</code>: This specifies that the server will run on port 8080.</li>
+            </ul>
+        </li>
+    </ol>
+    
+    <h2>3. Development vs. Production: <code>python app.py</code> vs. <code>python run.py</code></h2>
+    <p>It is important to understand the difference between the two ways of running this application, as they serve distinct purposes.</p>
+
+    <div class="info">
+        <p>This separation allows you to have a convenient, feature-rich environment for writing code and a stable, secure environment for sharing the application with others.</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th><code>python app.py</code></th>
+                <th><code>python run.py</code></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Server Type</strong></td>
+                <td>Flask's built-in Werkzeug development server.</td>
+                <td><strong>Waitress</strong>, a production-grade WSGI server.</td>
+            </tr>
+            <tr>
+                <td><strong>Primary Use Case</strong></td>
+                <td>Development and single-user testing.</td>
+                <td>Multi-user access on a local network or production deployment.</td>
+            </tr>
+            <tr>
+                <td><strong>Debug Mode</strong></td>
+                <td><strong>Enabled</strong> by default. Provides an interactive debugger in the browser and automatically reloads on code changes. This is a major security risk if exposed publicly.</td>
+                <td><strong>Disabled</strong>. The server is more secure and performant.</td>
+            </tr>
+            <tr>
+                <td><strong>Network Accessibility</strong></td>
+                <td>Typically listens on <code>127.0.0.1</code> (localhost) by default, accessible only from the same machine (though configurable).</td>
+                <td>Listens on <code>0.0.0.0</code> by default, making it immediately accessible to other computers on the local network.</td>
+            </tr>
+            <tr>
+                <td><strong>Recommendation</strong></td>
+                <td>Use this when you are actively writing or debugging code.</td>
+                <td>Use this when you want to share the application with others for use.</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

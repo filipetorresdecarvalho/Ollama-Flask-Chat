@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>setup.py - Project Initialization and Reset Utility</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 5px;
+            font-size: 85%;
+        }
+        pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+        }
+        ul, ol {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 0.5em;
+        }
+        .warning {
+            background-color: #ffebee;
+            padding: 1em;
+            border-left: 5px solid #c62828;
+        }
+    </style>
+</head>
+<body>
+
+    <h1><code>setup.py</code> - Project Initialization and Reset Utility</h1>
+
+    <h2>1. Overview and Critical Warning</h2>
+    <p>The <code>setup.py</code> script is a powerful and essential utility for performing a clean, first-time installation or a complete reset of the application. It is designed to be run once to get the application into a known, working state.</p>
+    <div class="warning">
+        <h3><strong>WARNING: This Script is Destructive</strong></h3>
+        <p>Running this script will perform the following actions:</p>
+        <ul>
+            <li>It will back up your existing project files (code, databases, configs).</li>
+            <li>It will then **permanently delete** all existing databases (<code>.db</code> files) and configuration files (<code>models.json</code>) to ensure a clean slate.</li>
+        </ul>
+        <p>Only run this script if you are setting up the project for the first time or if you want to completely reset the application to its default state.</p>
+    </div>
+
+    <h2>2. The Setup Workflow</h2>
+    <p>The script executes a precise, safety-oriented workflow to prevent data loss in case of failure. The process is as follows:</p>
+    <ol>
+        <li><strong>Gather Files</strong>: The script first identifies all critical project files (<code>.py</code>, <code>.html</code>, <code>.sql</code>, <code>.db</code>, etc.) that need to be backed up.</li>
+        <li><strong>Create Backup Archive</strong>: It creates a timestamped <code>.zip</code> file containing all the gathered files and places it in the <code>/backup</code> directory.</li>
+        <li><strong>Verify Backup Integrity</strong>: It performs a checksum test on the newly created archive to ensure it is not corrupt. <strong>This is a critical safety step.</strong> If the backup is invalid, the script will abort immediately, and no files will be deleted.</li>
+        <li><strong>Clear Old Data</strong>: Only after a successful and verified backup does the script proceed to delete all existing database files and configuration files.</li>
+        <li><strong>Reset and Initialize</strong>: Finally, it runs the setup process, which includes detecting Ollama models, creating a new <code>config.json</code> with a secure secret key, creating a new user database, and prompting you to set a password for the primary <code>root</code> admin account.</li>
+    </ol>
+
+    <h2>3. Core Function Breakdown</h2>
+    <p>Each step of the workflow is handled by a dedicated function.</p>
+
+    <h3><code>gather_files_to_backup()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To recursively walk through the project directory and create a list of all files matching the extensions defined in <code>FILE_EXTENSIONS_TO_BACKUP</code>.</li>
+        <li><strong>Mechanism</strong>: It uses <code>os.walk('.')</code> and intelligently skips the <code>backup</code> directory itself to prevent re-archiving previous backups.</li>
+    </ul>
+
+    <h3><code>create_zip_archive(file_list)</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To create a compressed zip archive from the provided list of files.</li>
+        <li><strong>Mechanism</strong>: It uses the <code>zipfile</code> library with <code>ZIP_DEFLATED</code> compression. The archive is given a unique, timestamped name (e.g., <code>backup_2025-06-11_19-45-30.zip</code>).</li>
+    </ul>
+    
+    <h3><code>verify_zip_archive(zip_filepath)</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To act as a safety check, ensuring the backup is valid before any destructive operations occur.</li>
+        <li><strong>Mechanism</strong>: It uses the built-in <code>zipfile.testzip()</code> method, which reads through all the files in the archive and checks their CRC-32 checksums against the stored values.</li>
+    </ul>
+
+    <h3><code>clear_all_databases_and_logs()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To wipe all dynamic data and configuration to ensure a clean slate for re-initialization.</li>
+        <li><strong>Mechanism</strong>: It iterates through the <code>database/</code> and <code>logs/</code> directories and deletes any file ending in <code>.db</code> or <code>.json</code>. It also deletes the root <code>models.json</code>.</li>
+    </ul>
+
+    <h3><code>reset_config_and_create_admin()</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To build a fresh, working configuration and create the primary administrator account.</li>
+        <li><strong>Mechanism</strong>: This function performs several actions:
+            <ol>
+                <li>It runs <code>get_models.py</code> as a subprocess to create a fresh <code>models.json</code>.</li>
+                <li>It generates a new, cryptographically secure Flask secret key using <code>secrets.token_hex()</code>.</li>
+                <li>It creates a default <code>config.json</code> file with the new key and a dynamically selected default model.</li>
+                <li>It uses <code>getpass.getpass()</code> to securely prompt the user for a new admin password, hiding the input.</li>
+                <li>It hashes the new password with <code>generate_password_hash()</code>.</li>
+                <li>It initializes the <code>users.db</code> from its schema and inserts the <code>root</code> admin user with `id=1`.</li>
+            </ol>
+        </li>
+    </ul>
+
+    <h2>4. Script Execution</h2>
+    <p>The standard <code>if __name__ == "__main__":</code> block ensures that the <code>main()</code> orchestration function is called only when the script is executed directly from the command line (<code>python setup.py</code>).</p>
+
+</body>
+</html>

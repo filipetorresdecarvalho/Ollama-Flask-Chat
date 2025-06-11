@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>get_models.py - Ollama Model Discovery Utility</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 2em;
+            color: #333;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+        pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 5px;
+            font-size: 85%;
+        }
+        pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <h1><code>get_models.py</code> - Ollama Model Discovery Utility</h1>
+    <p>This script is a standalone utility designed to detect all Ollama models installed on the local machine. It employs a robust, dual-method approach to ensure models are found even if the environment is not perfectly configured. The primary purpose of this script is to generate the <code>models.json</code> file, which is then used by the main Flask application to populate the model selection dropdown.</p>
+
+    <h2>1. Conditional Import of Ollama</h2>
+    <p>The script begins by safely checking for the presence of the <code>ollama</code> Python library.</p>
+    <pre><code>try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False</code></pre>
+    <ul>
+        <li><strong>Purpose</strong>: To handle the <code>ollama</code> library as an optional dependency.</li>
+        <li><strong>Mechanism</strong>: It uses a <code>try...except ImportError</code> block to attempt the import. This prevents the script from crashing if the library is not installed.</li>
+        <li><strong>State Management</strong>: It sets a global boolean flag, <code>OLLAMA_AVAILABLE</code>. This flag is used later to determine which model-fetching method to try first.</li>
+    </ul>
+
+    <h2>2. Core Functions</h2>
+    <p>The script's logic is primarily contained within two functions: one to fetch the models and one to save them.</p>
+
+    <h3><code>fetch_ollama_models()</code></h3>
+    <p>This is the central function of the script, responsible for discovering the models using a two-step fallback process.</p>
+    
+    <h4>Method 1: Python Library (Primary)</h4>
+    <ul>
+        <li><strong>Condition</strong>: This method is only attempted if the <code>OLLAMA_AVAILABLE</code> flag is <code>True</code>.</li>
+        <li><strong>Mechanism</strong>: It calls the <code>ollama.list()</code> function, which communicates with the Ollama service. It safely extracts the list of models from the returned dictionary.</li>
+        <li><strong>Logic</strong>: If the library call is successful and returns a non-empty list of models, the function immediately returns this list. If the library returns an empty list or if the call fails for any other reason, it prints a warning or error and proceeds to the command-line fallback method. This ensures maximum reliability.</li>
+    </ul>
+
+    <h4>Method 2: Command-Line Fallback</h4>
+    <ul>
+        <li><strong>Condition</strong>: This method is used if the Ollama library is not installed, if it fails, or if it returns an empty list.</li>
+        <li><strong>Mechanism</strong>: It uses Python's <code>subprocess.run()</code> to execute the command <code>ollama list</code> directly in the system's shell. It captures the command's standard output for parsing.</li>
+        <li><strong>Parsing</strong>: The script processes the raw text output from the command line. It splits the output into lines, skips the header row, and uses a regular expression (<code>re.split(r'\s{2,}', line)</code>) to correctly parse the columns, which are separated by two or more spaces.</li>
+        <li><strong>Error Handling</strong>: It includes a <code>try...except</code> block to catch <code>FileNotFoundError</code> (if the <code>ollama</code> executable is not in the system's PATH) and <code>subprocess.CalledProcessError</code> (if the command fails), returning an empty list in case of failure.</li>
+    </ul>
+
+    <h3><code>save_models_to_json(models)</code></h3>
+    <ul>
+        <li><strong>Purpose</strong>: To persist the discovered list of models into a file for the main application to use.</li>
+        <li><strong>Mechanism</strong>: It opens <code>models.json</code> in write mode (<code>'w'</code>), creating it if it doesn't exist or overwriting it if it does. It uses <code>json.dump()</code> with an <code>indent=4</code> argument to write the data in a human-readable, formatted way.</li>
+    </ul>
+
+    <h2>3. Script Execution</h2>
+    <p>The <code>if __name__ == "__main__":</code> block makes the script a runnable utility.</p>
+    <ul>
+        <li><strong>Execution Flow</strong>:
+            <ol>
+                <li>It calls <code>fetch_ollama_models()</code> to get the list of models.</li>
+                <li>It checks if the returned list is non-empty.</li>
+                <li>If models were found, it calls <code>save_models_to_json()</code> to save the file.</li>
+                <li>If no models were found by either method, it prints a final message to the console indicating that the search was unsuccessful.</li>
+            </ol>
+        </li>
+    </ul>
+
+</body>
+</html>
